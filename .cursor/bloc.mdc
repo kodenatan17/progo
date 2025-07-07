@@ -1,0 +1,237 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## LEGACY CODE FERRY NATAN WIBISONO
+### flutter_bloc Implementation
+- Use Bloc for complex event-driven logic and Cubit for simpler state management
+- Implement properly typed Events and States for each Bloc
+- Use Equatable for immutable state and union types
+- Create granular, focused Blocs for specific feature segments
+- Handle loading, error, and success states explicitly
+- Avoid business logic in UI components
+- Use BlocProvider for dependency injection of Blocs
+- Implement BlocObserver for logging and debugging
+- Separate event handling from UI logic
+- Separate UI Holder and possibility for Bloc to handle Business Logic
+
+### Dependency Injection
+- Use GetIt as a service locator for dependency injection
+- Register dependencies by feature in separate files
+- Implement lazy initialization where appropriate
+- Use factories for transient objects and singletons for services
+- Create proper abstractions that can be easily mocked for testing
+
+## Coding Standards
+### State Management
+- States should be immutable using Equatable
+- Use union types for state representation (initial, loading, success, error)
+- Emit specific, typed error states with failure details
+- Keep state classes small and focused
+- Use copyWith for state transitions
+- Handle side effects with BlocListener
+- Prefer BlocBuilder with buildWhen for optimized rebuilds
+
+```
+lib/
+├── features/
+│   └── user_manage/
+│       ├── presentation/
+│       │   ├── cubit/
+│       │   │   └── user_manage_cubit.dart
+│       │   ├── bloc/
+│       │   │   └── user_manage_social_bloc.dart
+│       │   └── screens/
+│       ├── domain/
+│       │   └── usecases/
+│       └── data/
+```
+
+## Implementation Examples
+### Cubit UI Holder
+```
+@injectable
+class UserManageCubit extends Cubit<UserManageState> {
+  UserManageCubit() : super(UserManageState.initial());
+
+  void updateSocialAccounts(List<SocialAccount> accounts) {
+    emit(state.copyWith(socialAccounts: accounts));
+  }
+
+  void toggleLoadingSocial(bool value) {
+    emit(state.copyWith(isSocialLoading: value));
+  }
+}
+```
+
+## Bloc Handle Business Logic
+### Event Handle on Bloc Business Logic
+```
+sealed class UserManageSocialEvent extends Equatable {
+  const UserManageSocialEvent();
+  @override
+  List<Object?> get props => [];
+}
+
+class FetchUserManageSocial extends UserManageSocialEvent {}
+class UpdateUserManageSocial extends UserManageSocialEvent {
+  final UserSocialData updatedData;
+  const UpdateUserManageSocial(this.updatedData);
+
+  @override
+  List<Object?> get props => [updatedData];
+}
+class RemoveUserManageSocial extends UserManageSocialEvent {
+  final String id;
+  const RemoveUserManageSocial(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}
+```
+### State Handle on Bloc Business Logic
+```
+sealed class UserManageSocialState extends Equatable {
+  const UserManageSocialState();
+  @override
+  List<Object?> get props => [];
+}
+
+class UserManageSocialInitial extends UserManageSocialState {}
+class UserManageSocialLoading extends UserManageSocialState {}
+class UserManageSocialSuccess extends UserManageSocialState {
+  final List<UserSocialData> data;
+  const UserManageSocialSuccess(this.data);
+
+  @override
+  List<Object?> get props => [data];
+}
+class UserManageSocialError extends UserManageSocialState {
+  final String message;
+  const UserManageSocialError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
+```
+### Handle on Bloc Business Logic
+```
+@injectable
+class UserManageSocialBloc
+    extends Bloc<UserManageSocialEvent, UserManageSocialState> {
+  final GetUserSocialUsecase getUsecase;
+  final UpdateUserSocialUsecase updateUsecase;
+  final RemoveUserSocialUsecase removeUsecase;
+
+  UserManageSocialBloc({
+    required this.getUsecase,
+    required this.updateUsecase,
+    required this.removeUsecase,
+  }) : super(UserManageSocialInitial()) {
+    on<FetchUserManageSocial>((event, emit) async {
+      emit(UserManageSocialLoading());
+      final result = await getUsecase();
+      result.when(
+        success: (data) => emit(UserManageSocialSuccess(data)),
+        error: (e) => emit(UserManageSocialError(e.message)),
+      );
+    });
+
+    on<UpdateUserManageSocial>((event, emit) async {
+      emit(UserManageSocialLoading());
+      final result = await updateUsecase(event.updatedData);
+      result.when(
+        success: (_) => add(FetchUserManageSocial()),
+        error: (e) => emit(UserManageSocialError(e.message)),
+      );
+    });
+
+    on<RemoveUserManageSocial>((event, emit) async {
+      emit(UserManageSocialLoading());
+      final result = await removeUsecase(event.id);
+      result.when(
+        success: (_) => add(FetchUserManageSocial()),
+        error: (e) => emit(UserManageSocialError(e.message)),
+      );
+    });
+  }
+}
+```
+
+### UI Implementation
+```
+class UserManagePage extends StatelessWidget {
+  const UserManagePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => getIt<UserManageCubit>()),
+        BlocProvider(create: (_) => getIt<UserManageSocialBloc>()..add(FetchUserManageSocial())),
+      ],
+      child: Scaffold(
+        appBar: AppBar(title: const Text('User Social Management')),
+        body: BlocListener<UserManageSocialBloc, UserManageSocialState>(
+          listener: (context, state) {
+            if (state is UserManageSocialSuccess) {
+              context.read<UserManageCubit>().updateSocial(state.data);
+            } else if (state is UserManageSocialError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message)),
+              );
+            }
+          },
+          child: BlocBuilder<UserManageCubit, UserManageState>(
+            buildWhen: (prev, next) => prev.socialData != next.socialData,
+            builder: (context, state) {
+              final data = state.socialData;
+              if (data.isEmpty) {
+                return const Center(child: Text("No Social Data"));
+              }
+
+              return ListView.builder(
+                itemCount: data.length,
+                itemBuilder: (_, index) {
+                  final item = data[index];
+                  return ListTile(
+                    title: Text(item.platform),
+                    subtitle: Text(item.username),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () {
+                        context
+                            .read<UserManageSocialBloc>()
+                            .add(RemoveUserManageSocial(item.id));
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            // contoh update
+            final dummyData = UserSocialData(id: "1", platform: "Twitter", username: "@example");
+            context
+                .read<UserManageSocialBloc>()
+                .add(UpdateUserManageSocial(dummyData));
+          },
+          child: const Icon(Icons.update),
+        ),
+      ),
+    );
+  }
+}
+```
+
+
+
+
+
+
+

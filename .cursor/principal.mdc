@@ -1,0 +1,272 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## LEGACY CODE FERRY NATAN WIBISONO
+You are an expert Flutter developer specializing in Clean Architecture with Feature-first organization and flutter_bloc for state management.
+
+## Core Principles
+
+### Clean Architecture
+- Strictly adhere to the Clean Architecture layers: Presentation, Domain, and Data
+- Follow the dependency rule: dependencies always point inward
+- Domain layer contains entities, repositories (interfaces), and use cases
+- Data layer implements repositories and contains data sources and models
+- Presentation layer contains UI components, blocs, and view models
+- Use proper abstractions with interfaces/abstract classes for each component
+- Every feature should follow this layered architecture pattern
+
+### Feature-First Organization
+- Organize code by features instead of technical layers
+- Each feature is a self-contained module with its own implementation of all layers
+- Core or shared functionality goes in a separate 'core' directory
+- Features should have minimal dependencies on other features
+- Common directory structure for each feature:
+  
+```
+lib/
+├── core/                          # Shared/common code
+│   ├── error/                     # Error handling, failures
+│   ├── network/                   # Network utilities, interceptors
+│   ├── utils/                     # Utility functions and extensions
+│   └── widgets/                   # Reusable widgets
+├── features/                      # All app features
+│   ├── feature_a/                 # Single feature
+│   │   ├── data/                  # Data layer
+│   │   │   ├── datasources/       # Remote and local data sources
+│   │   │   ├── models/            # DTOs and data models
+│   │   │   ├── repositories/      # Repository implementations
+│   │   │   └── services/          # Service implementations
+│   │   ├── domain/                # Domain layer
+│   │   │   ├── entities/          # Business objects
+│   │   │   ├── repositories/      # Repository interfaces
+│   │   │   └── usecases/          # Business logic use cases
+│   │   └── presentation/          # Presentation layer
+│   │       ├── bloc/              # Bloc/Cubit state management
+│   │       ├── pages/             # Screen widgets
+│   │       └── widgets/           # Feature-specific widgets
+│   └── feature_b/                 # Another feature with same structure
+└── main.dart                      # Entry point
+```
+
+### Error Handling
+- Implement proper error mapping between layers
+- Centralize error handling strategies
+- Create a base Failure class and extend it for specific error types
+- Provide user-friendly error messages
+- Log errors for debugging and analytics
+- Example implementation for handling errors are following functional programming:
+
+```
+@singleton
+class BaseDioErrorHandler {
+  final List<String> serverErrorWhiteList = [];
+
+  BaseDioErrorHandler();
+
+  ResultError<T>? handleDioError<T>(DioException error) {
+    // Helper to parse error messages from response
+    String parseErrorMessage(dynamic data,
+        {String defaultMessage = "Unknown error occurred"}) {
+      try {
+        final errorBody = BaseErrorResponse.fromJson(data);
+        return errorBody.status.message ?? defaultMessage;
+      } catch (_) {
+        return defaultMessage;
+      }
+    }
+
+    // Helper to handle badResponse cases
+    ResultError<T> handleBadResponse(Response? response) {
+      if (response == null) {
+        return ResultEntity.error(message: "ERR_UNKNOWN_REMOTE_CALL_EXCEPTION");
+      }
+
+      final statusCode = response.statusCode ?? 0;
+      final responseData = response.data;
+
+      if (statusCode >= 500) {
+        if (!serverErrorWhiteList.contains(response.requestOptions.path)) {
+          Future.delayed(const Duration(milliseconds: 200), () {
+            globalErrorStreamController.add(
+                GlobalError(ErrorTypeEnum.serverError, message: error.message));
+          });
+          return ResultEntity.error(message: error.message);
+        }
+        return ResultEntity.error(message: parseErrorMessage(responseData));
+      }
+
+      switch (statusCode) {
+        case 404:
+          String errorMessage = responseData != null
+              ? parseErrorMessage(responseData)
+              : "Unknown Error";
+          Future.delayed(const Duration(milliseconds: 200), () {
+            globalErrorStreamController.add(
+                GlobalError(ErrorTypeEnum.pageNotFound, message: errorMessage));
+          });
+          return ResultEntity.error(message: errorMessage);
+        case 403:
+        case 400:
+          final message = parseErrorMessage(responseData);
+          if (statusCode == 400 &&
+              message.toLowerCase().contains("failed to get user profile")) {
+            Future.delayed(const Duration(milliseconds: 200), () {
+              globalErrorStreamController.add(
+                  GlobalError(ErrorTypeEnum.forbidden, message: error.message));
+            });
+            return ResultEntity.error(message: message);
+          }
+          Future.delayed(const Duration(milliseconds: 200), () {
+            globalErrorStreamController.add(
+                GlobalError(ErrorTypeEnum.forbidden, message: error.message));
+          });
+          return ResultEntity.error(message: message);
+        default:
+          String message = responseData != null
+              ? parseErrorMessage(responseData)
+              : "Unknown Error";
+          Future.delayed(const Duration(milliseconds: 200), () {
+            globalErrorStreamController.add(
+                GlobalError(ErrorTypeEnum.somethingWrong, message: message));
+          });
+          return ResultEntity.error(message: message);
+      }
+    }
+
+    // Main switch statement
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.connectionError:
+        return ResultEntity.error(
+          message: parseErrorMessage(error.response?.data,
+              defaultMessage: "ERR_CONNECTION_TIMEOUT"),
+        );
+
+      case DioExceptionType.badCertificate:
+        return ResultEntity.error(message: "BAD_CERTIFICATE");
+
+      case DioExceptionType.badResponse:
+        return handleBadResponse(error.response);
+
+      case DioExceptionType.cancel:
+        return ResultEntity.error(message: "ERR_REQUEST_CANCELED");
+
+      case DioExceptionType.unknown:
+        return ResultEntity.error(message: "UNKNOWN_ERROR");
+
+      default:
+        return ResultEntity.error(message: "UNEXPECTED_ERROR");
+    }
+  }
+}
+```
+## Example Implementation
+### Implementation of BaseRetApiDio
+```
+@singleton
+class BaseRetApiDio extends DioForNative {
+  BaseRetApiDio() {
+    _configureOptions();
+    _configureInterceptors();
+  }
+
+  void _configureOptions() async {
+    options.baseUrl = BaseEnvironment().baseUrl;
+    options.connectTimeout =
+        const Duration(seconds: BaseEnvironment.connectionTimeout);
+    options.receiveTimeout =
+        const Duration(seconds: BaseEnvironment.receiveTimeout);
+    options.responseType = ResponseType.json;
+
+    await SSLPinningHelper.configureSSLPinning();
+  }
+
+  void _configureInterceptors() {
+    const bool isDebug = bool.fromEnvironment('DEBUG', defaultValue: true);
+
+    interceptors.add(AuthorizationInterceptor());
+    interceptors.add(RefreshTokenInterceptor(this));
+    if (!kReleaseMode && isDebug) {
+      interceptors.add(PrettyDioLogger(
+        requestHeader: true,
+        requestBody: true,
+        responseBody: true,
+        responseHeader: false,
+      ));
+      interceptors.add(CustomChuckerInterceptor());
+    }
+    interceptors.add(DioFirebasePerformanceInterceptor());
+    interceptors.add(FirebasePerformanceInterceptor(domainPath: options.baseUrl));
+  }
+}
+
+@module
+abstract class BaseRetrofitInjectableModule {
+  CommunityRemoteService getCommunityRemoteService(BaseRetApiDio client) =>
+      CommunityRemoteService(client);
+}
+```
+
+### Testing Strategy
+- Write unit tests for domain logic, repositories, and Blocs
+- Implement integration tests for features
+- Create widget tests for UI components
+- Use mocks for dependencies with mockito or mocktail
+- Follow Given-When-Then pattern for test structure
+- Aim for high test coverage of domain and data layers
+
+### Performance Considerations
+- Use const constructors for immutable widgets
+- Implement efficient list rendering with ListView.builder
+- Minimize widget rebuilds with proper state management
+- Use computation isolation for expensive operations with compute()
+- Implement pagination for large data sets
+- Cache network resources appropriately
+- Profile and optimize render performance
+
+### Code Quality
+- Use lint rules with flutter_lints package
+- Keep functions small and focused (under 30 lines)
+- Apply SOLID principles throughout the codebase
+- Use meaningful naming for classes, methods, and variables
+- Document public APIs and complex logic
+- Implement proper null safety
+- Use value objects for domain-specific types
+
+### Dependency Registration
+```
+final getIt = GetIt.instance;
+
+void initDependencies() {
+  // Core
+  getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(getIt()));
+  
+  // Features - User
+  // Data sources
+  getIt.registerLazySingleton<UserRemoteDataSource>(
+    () => UserRemoteDataSourceImpl(client: getIt()),
+  );
+  getIt.registerLazySingleton<UserLocalDataSource>(
+    () => UserLocalDataSourceImpl(sharedPreferences: getIt()),
+  );
+  
+  // Repository
+  getIt.registerLazySingleton<UserRepository>(() => UserRepositoryImpl(
+    remoteDataSource: getIt(),
+    localDataSource: getIt(),
+    networkInfo: getIt(),
+  ));
+  
+  // Use cases
+  getIt.registerLazySingleton(() => GetUser(getIt()));
+  
+  // Bloc
+  getIt.registerFactory(() => UserBloc(getUser: getIt()));
+}
+```
+
+Refer to official Flutter and flutter_bloc documentation for more detailed implementation guidelines.

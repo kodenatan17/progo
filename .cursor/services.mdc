@@ -1,0 +1,77 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### Remote Service Pattern
+- Implementation is recommended using the BaseRetApiDio class, Retrofit
+- Each remote service class must handle only one responsibility or domain.
+- Remote service should be open for extension but closed for modification.
+- Ensure that subclasses (or generated implementations) can replace their abstractions without altering expected behavior.
+- Clients should not be forced to depend on methods they do not use.
+- Depend on abstractions, not on concrete implementations.
+
+### Implementation on RemoteService
+```
+@RestApi()
+abstract class CommunityRemoteService {
+  @factoryMethod
+  factory CommunityRemoteService(BaseRetApiDio client, {String baseUrl}) =
+      _CommunityRemoteService;
+
+  @GET(BaseApis.communityList)
+  Future<BaseSuccessResponse<List<CommunityListRemoteResponse>>> communityList(
+      @Queries() Map<String, dynamic> params);
+
+  //Other Implementation...
+}
+```
+
+### Register it on BaseRetrofit
+```
+@singleton
+class BaseRetApiDio extends DioForNative {
+  BaseRetApiDio() {
+    _configureOptions();
+    _configureInterceptors();
+  }
+
+  void _configureOptions() async {
+    options.baseUrl = BaseEnvironment().baseUrl;
+    options.connectTimeout =
+        const Duration(seconds: BaseEnvironment.connectionTimeout);
+    options.receiveTimeout =
+        const Duration(seconds: BaseEnvironment.receiveTimeout);
+    options.responseType = ResponseType.json;
+
+    await SSLPinningHelper.configureSSLPinning();
+  }
+
+  void _configureInterceptors() {
+    const bool isDebug = bool.fromEnvironment('DEBUG', defaultValue: true);
+
+    // interceptors.add(AuthorizationInterceptor());
+    // interceptors.add(RefreshTokenInterceptor(this));
+    if (!kReleaseMode && isDebug) {
+      interceptors.add(PrettyDioLogger(
+        requestHeader: true,
+        requestBody: true,
+        responseBody: true,
+        responseHeader: false,
+      ));
+      interceptors.add(CustomChuckerInterceptor());
+    }
+    // interceptors.add(DioFirebasePerformanceInterceptor());
+    // interceptors
+    //     .add(FirebasePerformanceInterceptor(domainPath: options.baseUrl));
+  }
+}
+
+@module
+abstract class BaseRetrofitInjectableModule {
+  CommunityRemoteService getCommunityRemoteService(BaseRetApiDio client) =>
+      CommunityRemoteService(client);
+
+  //Other Implementation...    
+}
+```

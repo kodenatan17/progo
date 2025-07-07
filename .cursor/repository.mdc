@@ -1,0 +1,66 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## LEGACY CODE FERRY NATAN WIBISONO
+### Repository Pattern
+- Repositories act as a single source of truth for data
+- Implement caching strategies when appropriate
+- Handle network connectivity issues gracefully
+- Map data models to domain entities
+- Create proper abstractions with well-defined method signatures
+- Handle pagination and data fetching logic
+
+```
+lib/
+├── features/
+│   └── community/
+│       ├── data/
+│       │   ├── datasources/
+│       │   │   ├── remote_data_source.dart
+│       │   │   └── local_data_source.dart
+│       │   └── repositories/
+│       │       └── community_repository_impl.dart
+│       ├── domain/
+│       │   ├── entities/
+│       │   │   └── community_entity.dart
+│       │   └── repositories/
+│       │       └── community_repository.dart
+```
+
+## Implementation Repository
+### Example Code on Repository
+```
+abstract class CommunityRepository {
+  Future<ResultEntity<CommunityDetailData>> communityDetail(String id);
+
+  // Other implementations...
+}
+```
+
+### Example Code on Repositoy Impl
+```
+@LazySingleton(as: CommunityRepository)
+class CommunityRepositoriesImpl extends CommunityRepository {
+  final CommunityRemoteDataSource _dataSource;
+  final BaseDioErrorHandler _errorHandler;
+
+  CommunityRepositoriesImpl(this._dataSource, this._errorHandler);
+
+  @override
+  Future<ResultEntity<CommunityDetailData>> communityDetail(String id) async {
+    try {
+      final result = await _dataSource.communityDetail(id);
+      return ResultEntity.success(data: result.toDomain());
+    } on DioException catch (e) {
+      return _errorHandler.handleDioError(e) ??
+          ResultEntity.error(message: e.message);
+    } catch (e) {
+      return ResultEntity.error(message: e.toString());
+    }
+  }
+
+  // Other implementations...
+}
+```

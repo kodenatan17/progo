@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### UseCase Params
+- Each UseCaseParams class should encapsulate only the data required for one specific use case.
+- The class should be open for extension (e.g. optional fields) but closed for modification.
+- Ensure any subclass or similar param class can be used interchangeably if needed.
+- Do not force params classes to implement behavior they do not need.
+- UseCase should depend on UseCaseParams (abstraction), not hardcoded primitive types.
+
+```
+lib/
+├── features/
+│   └── community/
+│       ├── data/
+│       │   ├── models/
+│       │   │   ├── delete_user_manage_social/
+│       │   │   │   └──delete_user_manage_social_request_model.dart
+│       │   └── repositories/
+│       ├── domain/
+│       │   ├── usecases/
+│       │   │   └── delete_user_manage_social_params.dart
+│       │   └── repositories/
+```
+
+## Implemetation Example
+```
+class DeleteUserManageSocialParams extends Equatable
+    implements ParamsMapper<DeleteUserManageSocialRequestModel> {
+  final String social;
+  final String link;
+
+  const DeleteUserManageSocialParams({
+    required this.social,
+    required this.link,
+  });
+
+  @override
+  List<Object?> get props => [social, link];
+  
+  @override
+  DeleteUserManageSocialRequestModel toData() {
+    return DeleteUserManageSocialRequestModel(
+      social: social,
+      link: link,
+    );
+  }
+}
+```

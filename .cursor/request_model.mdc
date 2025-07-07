@@ -1,0 +1,59 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### Request Model
+- A request model should contain only the data and behavior required to structure the request.
+- Request models should be open for extension, but closed for modification.
+- Any subclass or alternative form of a request model must be usable as the base model without breaking behavior.
+- Do not force a model to carry fields it does not need.
+- High-level modules (use cases/services) should not depend on low-level serialization details.
+
+```
+lib/
+├── features/
+│   └── community/
+│       ├── data/
+│       │   ├── models/
+│       │   │   ├── delete_user_manage_social/
+│       │   │   │   └──delete_user_manage_social_request_model.dart
+│       │   └── repositories/
+│       ├── domain/
+│       │   ├── usecases/
+│       │   │   └── delete_user_manage_social_params.dart
+│       │   └── repositories/
+```
+
+## Implementation Examples
+```
+part 'delete_user_manage_social_request_model.g.dart';
+
+@JsonSerializable()
+class DeleteUserManageSocialRequestModel implements RequestMapper<DeleteUserManageSocialParams> {
+  final String social;
+  final String link;
+
+  const DeleteUserManageSocialRequestModel({
+    required this.social,
+    required this.link,
+  });
+
+  factory DeleteUserManageSocialRequestModel.fromJson(Map<String, dynamic> json) =>
+      _$DeleteUserManageSocialRequestModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DeleteUserManageSocialRequestModelToJson(this);
+
+  @override
+  String toString() => toJson().toString();
+  
+  @override
+  DeleteUserManageSocialParams toDomain() {
+    return DeleteUserManageSocialParams(
+      social: social,
+      link: link,
+    );
+  }
+}
+```
+

@@ -1,0 +1,148 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+###ATOMIC PATTERNS
+```
+lib/
+├── features/
+│   └── user_manage/
+│       ├── ui_component/
+│       │   ├── moleculs/
+│       │   │   └── another_moleculs.dart
+│       │   ├── organism/
+│       │   │   └── another_organism.dart
+```
+
+
+### Moleculs Rules
+- Group of atoms that form a simple component.
+- Small functional units
+- May have minimal local state
+- No API or complex logic
+
+### Implementation on Moleculs
+```
+class HomeAppbarSearchMoleculs extends StatelessWidget {
+  final Function(String) onChanged;
+  final Function(String) onEnter;
+  final String value;
+  final TextEditingController textController;
+
+  const HomeAppbarSearchMoleculs({
+    super.key,
+    required this.onChanged,
+    required this.value,
+    required this.textController,
+    required this.onEnter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      onFieldSubmitted: onEnter,
+      controller: textController,
+      style: AppTextStyles.bodySmallRegular.copyWith(color: const Color(0xFF929B9B)),
+      decoration: InputDecoration(
+        isDense: true,
+        hintMaxLines: 1,
+        filled: true,
+        fillColor: Colors.white,
+        hintStyle: AppTextStyles.bodySmallRegular.copyWith(color: const Color(0xFF929B9B)),
+        hintText: "Search people, topic, & other...",
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(21),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(0),
+          child: IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.search_outlined,
+              size: 18,
+            ),
+            color: AppColors.primaryColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+### Organism Rules
+- Handles layout and structure
+- May have state, but no business/data logic
+- Must be reusable
+
+### Implementation on Moleculs
+```
+class FeedDrawerOrganism extends StatelessWidget {
+  final FeedDrawerData datas;
+  final FeedDrawerEvents events;
+  const FeedDrawerOrganism({
+    super.key,
+    required this.datas,
+    required this.events,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FeedDrawerMenuProfilingMoleculs(
+                  image: datas.image,
+                  name: datas.name,
+                  isVerified: datas.isVerified,
+                  occupationTitle: datas.occupationTitle,
+                  occupationWorkplace: datas.occupationWorkplace,
+                ),
+            
+                /// Menu Section
+                FeedDrawerMenuItemMoleculs(
+                  icons: Assets.icons.icFeedMyProfileMenu,
+                  label: "My Profile",
+                  onClick: () => events.onClickMyProfile(datas.id),
+                ),
+                const SizedBox(height: 24),
+                FeedDrawerMenuItemMoleculs(
+                  icons: Assets.icons.icFeedPartnerRewardMenu,
+                  label: "Partner & Reward",
+                  onClick: () => events.onClickMyReward(datas.id),
+                ),
+                const SizedBox(height: 24),
+                FeedDrawerMenuItemMoleculs(
+                  icons: Assets.icons.icFeedManageCommunityMenu,
+                  label: "Manage Community",
+                  onClick: events.onClickManageCommunity,
+                ),
+                const SizedBox(height: 24),
+                FeedDrawerMenuItemMoleculs(
+                  icons: Assets.icons.icFeedSettingsMenu,
+                  label: "Settings & Preference",
+                  onClick: events.onClickSettings,
+                ),
+                const SizedBox(height: 24),
+                FeedDrawerMenuItemMoleculs(
+                  icons: Assets.icons.icFeedFeedback,
+                  label: "Feedback & Help",
+                  onClick: events.onClickFeedback,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+

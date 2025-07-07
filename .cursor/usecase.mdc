@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### Use Case Implementation
+- Each use case should have only one responsibility.
+- Use cases should be open for extension, but closed for modification.
+- You should be able to substitute a use case implementation without breaking the consumer.
+- Use case interfaces should not force clients to depend on methods they don't use.
+- Use cases should depend on abstractions, not concrete implementations.
+- if the UseCase is using Param, then use and adjust with abstract function class UseCaseWithParams<Params, ReturnType>
+- if the UseCase is not use any Param, then use and adjust with the abstract function class UseCase<ReturnType> 
+
+### Structure Folder
+- if there are not ready structured folder, use this example strucutre folder
+
+```
+lib/
+├── features/
+│   └── community/
+│       ├── domain/
+│       │   ├── usecases/
+│       │   │   └── community_detail_usecase.dart
+│       │   ├── entities/
+│       │   ├── repositories/
+│       ├── data/
+│       │   └── repositories/
+```
+
+## Implementation Examples
+### UseCase With Params
+```
+@lazySingleton
+class CommunityDetailUsecase
+    implements UseCaseWithParams<String, CommunityDetailData> {
+  final CommunityRepository _repository;
+
+  const CommunityDetailUsecase(this._repository);
+
+  @override
+  Future<ResultEntity<CommunityDetailData>> call(String params) async {
+    return await _repository.communityDetail(params);
+  }
+}
+```
+
+### UseCase without params
+```
+class CommunityEventTypeUsecase
+    implements UseCase<List<CommunityEventTypeData>> {
+  final CommunityRepository _repository;
+
+  const CommunityEventTypeUsecase(this._repository);
+
+  @override
+  Future<ResultEntity<List<CommunityEventTypeData>>> call() async {
+    return await _repository.communityEventType();
+  }
+}
+```

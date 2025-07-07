@@ -1,0 +1,169 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### Data Model
+- Each DataModel should only be responsible for representing API data. Do not mix it with UI logic or business rules.
+- Match the API response structure precisely. Use nullable types where applicable, avoid guessing or "fixing" backend data in the model layer.
+- For nested or complex JSON structures, define specific model classes rather than flattening or loosely typing with dynamic.
+- When mapping to domain or UI, depend on interfaces or abstract types, not concrete implementations.
+- All models should use const constructors, be immutable, and implement Equatable for value comparison.
+- Respect the clean flow: API → DataModel → Domain → Presentation
+
+```
+lib/
+├── features/
+│   └── community/
+│       ├── domain/
+│       │   ├── data/
+│       │   │   └── community_detail/
+│       │   │       └── community_detail_data.dart
+```
+
+### Example Implementation
+```
+class CommunityDetailData extends Equatable
+    implements PresentationMapper<CommunityDetailInformationData> {
+  final String id;
+  final CommunityDetail community;
+  final String overview;
+  final String missions;
+  final String goals;
+  final List<String> focuses;
+  final CommunityRepresentative representative;
+
+  const CommunityDetailData({
+    required this.id,
+    required this.community,
+    required this.focuses,
+    required this.overview,
+    required this.missions,
+    required this.goals,
+    required this.representative,
+  });
+
+  @override
+  List<Object?> get props => [
+        id,
+        community,
+        focuses,
+        overview,
+        missions,
+        goals,
+        representative,
+      ];
+
+  @override
+  CommunityDetailInformationData toPresentation() {
+    return CommunityDetailInformationData(
+      communityName: community.name,
+      communityType: community.type,
+      communityMemberStatus: community.memberStatus,
+      communityIsVerified: community.isVerified,
+      communityImage: community.image,
+      communityBannerImage: community.bannerImage,
+      communityImageMember: community.imageMember ?? [],
+      communityTotalMember: community.totalMember,
+      communityFocuses: focuses,
+      communityRepresentativeName: representative.creator.name,
+      communityRepresentativeOccupationTitle:
+          representative.creator.occupation.title,
+      communityRepresentativeOccupationWorkplace:
+          representative.creator.occupation.workplace,
+      communityRepresentativeEmail: representative.socials.email ?? '',
+      communityRepresentativePhone: representative.socials.phone ?? '',
+      communitySocialInstagram: representative.socials.instagram ?? '',
+      communitySocialTwitter: representative.socials.twitter ?? '',
+      communitySocialFacebook: representative.socials.facebook ?? '',
+      communitySocialLinkedin: representative.socials.linkedIn ?? '',
+      communitySocialMedium: representative.socials.link ?? '',
+      communitySocialLink: representative.socials.link ?? '',
+      communityRepresetativeImage: representative.creator.image,
+      communityOverview: overview,
+      communityMission: missions,
+      communityGoal: goals,
+      communityDescription: community.description,
+      communityFlag: community.flag,
+      communityCountry: community.country,
+      communityPlace: community.city,
+    );
+  }
+}
+
+class CommunityDetail extends Equatable {
+  final String name;
+  final String type;
+  final String description;
+  final String memberStatus;
+  final bool isVerified;
+  final String image;
+  final String bannerImage;
+  final String city;
+  final String country;
+  final String flag;
+  final int totalMember;
+  final List<String>? imageMember;
+
+  const CommunityDetail({
+    required this.name,
+    required this.type,
+    required this.description,
+    required this.memberStatus,
+    required this.isVerified,
+    required this.image,
+    required this.bannerImage,
+    required this.city,
+    required this.country,
+    required this.flag,
+    required this.totalMember,
+    this.imageMember,
+  });
+
+  @override
+  List<Object?> get props => [
+        name,
+        type,
+        description,
+        memberStatus,
+        isVerified,
+        image,
+        bannerImage,
+        city,
+        country,
+        flag,
+        totalMember,
+        imageMember,
+      ];
+}
+
+class CommunityRepresentative extends Equatable {
+  final CreatorRepresentative creator;
+  final SocialUser socials;
+
+  const CommunityRepresentative({
+    required this.creator,
+    required this.socials,
+  });
+
+  @override
+  List<Object?> get props => [creator, socials];
+}
+
+class CreatorRepresentative extends Equatable {
+  final String id;
+  final String name;
+  final String image;
+  final OccupationData occupation;
+
+  const CreatorRepresentative({
+    required this.id,
+    required this.name,
+    required this.image,
+    required this.occupation,
+  });
+
+  @override
+  List<Object?> get props => [id, image, name, occupation];
+}
+```

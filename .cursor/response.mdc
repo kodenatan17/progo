@@ -1,0 +1,202 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### REMOTE RESPONSE
+- Always mirror the structure, naming, and types of the API response contract.
+- If a field is an object, you must create a new class to represent it, do not inline it as a Map<String, dynamic>.
+- Each RemoteResponse class should only map and transform its own part of the response.
+- Remote response classes should be extendable (e.g., for versioned APIs), but not modifiable for existing use.
+- Ensure that all response classes implementing ResponseMapper<T> return valid domain models.
+- Only implement interfaces that are necessary for transformation.
+- Depend on abstractions (ResponseMapper) rather than raw JSON.
+- Always suffix classes with Response to indicate it's a DTO/remote model.
+- Nest classes for clarity if only used internally, or separate if reused.
+- Prefer using model classes (objects) over raw maps or lists of dynamic.
+- Always match nullability with the API contract, Use required only when guaranteed non-null by the server.
+- If the return on API response contract only Boolean, just used BooleanOnlyRemoteResponse.
+
+```
+lib/
+├── features/
+│   └── community/
+│       ├── data/
+│       │   ├── models/
+│       │   │   ├── remote/
+│       │   │   │   ├── community_detail/
+│       │   │   │   │   └──community_detail_remote_response.dart
+│       │   └── repositories/
+```
+
+## Implementation Examples
+
+```
+part 'community_detail_remote_response.g.dart';
+
+@JsonSerializable()
+class CommunityDetailRemoteResponse
+    implements ResponseMapper<CommunityDetailData> {
+  final String id;
+  final CommunityDetailResponse community;
+  final String overview;
+  final String missions;
+  final String goals;
+  final List<String> focuses;
+  final CommunityRepresentativeResponse representative;
+
+  const CommunityDetailRemoteResponse({
+    required this.id,
+    required this.community,
+    required this.focuses,
+    required this.goals,
+    required this.missions,
+    required this.overview,
+    required this.representative,
+  });
+
+  factory CommunityDetailRemoteResponse.fromJson(Map<String, dynamic> json) =>
+      _$CommunityDetailRemoteResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CommunityDetailRemoteResponseToJson(this);
+
+  @override
+  String toString() => toJson().toString();
+
+  @override
+  CommunityDetailData toDomain() {
+    return CommunityDetailData(
+      id: id,
+      community: community.toDomain(),
+      focuses: focuses,
+      overview: overview,
+      missions: missions,
+      goals: goals,
+      representative: representative.toDomain(),
+    );
+  }
+}
+
+@JsonSerializable()
+class CommunityDetailResponse implements ResponseMapper<CommunityDetail> {
+  final String name;
+  final String type;
+  final String description;
+  final String memberStatus;
+  final bool isVerified;
+  final String image;
+  final String bannerImage;
+  final String flag;
+  final String city;
+  final String country;
+  final int totalMember;
+  final List<String>? imageMember;
+
+  const CommunityDetailResponse({
+    required this.name,
+    required this.type,
+    required this.description,
+    required this.memberStatus,
+    required this.isVerified,
+    required this.image,
+    required this.bannerImage,
+    required this.flag,
+    required this.city,
+    required this.country,
+    required this.totalMember,
+    this.imageMember,
+  });
+
+  factory CommunityDetailResponse.fromJson(Map<String, dynamic> json) =>
+      _$CommunityDetailResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CommunityDetailResponseToJson(this);
+
+  @override
+  String toString() => toJson().toString();
+
+  @override
+  CommunityDetail toDomain() {
+    return CommunityDetail(
+      name: name,
+      type: type,
+      description: description,
+      memberStatus: memberStatus,
+      isVerified: isVerified,
+      image: image,
+      bannerImage: bannerImage,
+      flag: flag,
+      city: city,
+      country: country,
+      totalMember: totalMember,
+      imageMember: imageMember,
+    );
+  }
+}
+
+@JsonSerializable()
+class CommunityRepresentativeResponse
+    implements ResponseMapper<CommunityRepresentative> {
+  final CreatorRepresentativeResponse creator;
+  final SocialUserResponse socials;
+
+  const CommunityRepresentativeResponse({
+    required this.creator,
+    required this.socials,
+  });
+
+  factory CommunityRepresentativeResponse.fromJson(Map<String, dynamic> json) =>
+      _$CommunityRepresentativeResponseFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$CommunityRepresentativeResponseToJson(this);
+
+  @override
+  String toString() => toJson().toString();
+
+  @override
+  CommunityRepresentative toDomain() {
+    return CommunityRepresentative(
+      creator: creator.toDomain(),
+      socials: socials.toDomain(),
+    );
+  }
+}
+
+@JsonSerializable()
+class CreatorRepresentativeResponse
+    implements ResponseMapper<CreatorRepresentative> {
+  final String id;
+  final String name;
+  final String image;
+  final OccupationResponse occupation;
+
+  const CreatorRepresentativeResponse({
+    required this.id,
+    required this.name,
+    required this.image,
+    required this.occupation,
+  });
+
+  factory CreatorRepresentativeResponse.fromJson(Map<String, dynamic> json) =>
+      _$CreatorRepresentativeResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CreatorRepresentativeResponseToJson(this);
+
+  @override
+  String toString() => toJson().toString();
+
+  @override
+  CreatorRepresentative toDomain() {
+    return CreatorRepresentative(
+      id: id,
+      name: name,
+      image: image,
+      occupation: occupation.toDomain(),
+    );
+  }
+}
+```
+
+
+
